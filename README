@@ -1,0 +1,498 @@
+# Product Label Scanner: Build From Zero (Django + EasyOCR + spaCy)
+
+This guide teaches you how to build this project yourself from scratch.
+
+You will build:
+- A Django backend
+- REST API for image upload and scan results
+- OCR pipeline (OpenCV + EasyOCR)
+- Smart extraction (LOT and expiry) with regex fallback and optional spaCy NER
+- Simple frontend (HTML/CSS/JS)
+- SQLite database storage and scan history
+
+---
+
+## 1) Prerequisites
+
+Install these first:
+- Python 3.11+ (3.12/3.13 also fine)
+- `pip`
+- `venv`
+- Git (optional, but recommended)
+
+Check versions:
+
+```bash
+python3 --version
+pip3 --version
+```
+
+If `python` does not exist on your system, use `python3` in all commands.
+
+---
+
+## 2) Create project folder
+
+```bash
+mkdir Product_Label_Scanner
+cd Product_Label_Scanner
+```
+
+Optional Git init:
+
+```bash
+git init
+```
+
+---
+
+## 3) Create virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+After activation, your terminal usually shows `(venv)`.
+
+---
+
+## 4) Install dependencies
+
+Install core packages:
+
+```bash
+pip install Django djangorestframework easyocr opencv-python-headless dateparser spacy
+```
+
+Freeze dependencies:
+
+```bash
+pip freeze > requirements.txt
+```
+
+---
+
+## 5) Create Django project + app
+
+```bash
+django-admin startproject label_scanner .
+python manage.py startapp scanner
+```
+
+You should now have:
+- `manage.py`
+- `label_scanner/`
+- `scanner/`
+
+---
+
+## 6) Update settings
+
+Edit `label_scanner/settings.py`.
+
+### 6.1 Add installed apps
+
+Add to `INSTALLED_APPS`:
+- `rest_framework`
+- `scanner`
+
+### 6.2 Templates path
+
+Set templates directory:
+
+```python
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+```
+
+### 6.3 Static/media config
+
+Add:
+
+```python
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+```
+
+---
+
+## 7) Create model
+
+Edit `scanner/models.py`:
+
+```python
+from django.db import models
+
+
+class ProductLabel(models.Model):
+    image = models.ImageField(upload_to="labels/")
+    raw_text = models.TextField(blank=True)
+    lot_number = models.CharField(max_length=100, blank=True)
+    expiry_date = models.CharField(max_length=50, blank=True)
+    expiry_date_parsed = models.DateField(null=True, blank=True)
+    confidence = models.FloatField(default=0.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+```
+
+Run migrations:
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+## 8) Create serializer
+
+Create/edit `scanner/serializers.py`:
+
+```python
+from rest_framework import serializers
+from .models import ProductLabel
+
+
+class ProductLabelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductLabel
+        fields = [
+            "id",
+            "image",
+            "raw_text",
+            "lot_number",
+            "expiry_date",
+            "expiry_date_parsed",
+            "confidence",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "raw_text",
+            "lot_number",
+            "expiry_date",
+            "expiry_date_parsed",
+            "confidence",
+            "created_at",
+        ]
+```
+
+---
+
+## 9) Build OCR service
+
+Create `scanner/ocr_service.py`.
+
+Minimum responsibilities:
+- preprocess image with OpenCV
+- run EasyOCR
+- clean OCR text
+- extract lot + expiry (NER if available, regex fallback)
+- parse expiry date
+- return structured dict
+
+Expected return shape from `scan_label(image_path)`:
+
+```python
+{
+    "raw_text": "...",
+    "lot_number": "...",
+    "expiry_date": "...",
+    "expiry_date_parsed": date_or_none,
+    "confidence": 0.0,
+}
+```
+
+Important implementation tips:
+- Use lazy singleton for EasyOCR reader (load once).
+- Normalize Arabic-Indic digits to ASCII before parsing dates.
+- Never return invalid month/year (e.g., `83/2010`).
+- If parsing fails, return empty expiry string and `None` parsed date.
+
+Optional NER mode:
+- If a spaCy model exists (e.g., `lot_ner_model/`), use it.
+- If missing, continue with regex fallback.
+
+---
+
+## 10) Create API views
+
+Edit `scanner/views.py` with:
+- `index` page renderer
+- `scan_label_view` (`POST /api/scan/`)
+- `label_history` (`GET /api/history/`)
+- `delete_label` (`DELETE /api/labels/<id>/`)
+
+Scan flow in view:
+1. Validate uploaded file
+2. Save image into `ProductLabel`
+3. Call `scan_label(label.image.path)`
+4. Save parsed fields to DB
+5. Return serializer response
+
+---
+
+## 11) Configure URLs
+
+Create/edit `scanner/urls.py`:
+
+```python
+from django.urls import path
+from .views import index, scan_label_view, label_history, delete_label
+
+urlpatterns = [
+    path("", index, name="index"),
+    path("api/scan/", scan_label_view, name="scan_label"),
+    path("api/history/", label_history, name="label_history"),
+    path("api/labels/<int:pk>/", delete_label, name="delete_label"),
+]
+```
+
+Edit `label_scanner/urls.py`:
+
+```python
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("", include("scanner.urls")),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
+---
+
+## 12) Create frontend files
+
+Create directories:
+
+```bash
+mkdir -p templates/scanner static/css static/js media/labels
+```
+
+Create:
+- `templates/scanner/index.html`
+- `static/css/style.css`
+- `static/js/app.js`
+
+Frontend behavior:
+- File input + upload button
+- Call `POST /api/scan/` with `FormData`
+- Show:
+  - lot number
+  - expiry date
+  - raw text
+  - confidence
+- Load history from `GET /api/history/`
+- Allow delete via `DELETE /api/labels/<id>/`
+
+---
+
+## 13) Create admin integration (optional but useful)
+
+Edit `scanner/admin.py`:
+
+```python
+from django.contrib import admin
+from .models import ProductLabel
+
+
+@admin.register(ProductLabel)
+class ProductLabelAdmin(admin.ModelAdmin):
+    list_display = ("id", "lot_number", "expiry_date", "expiry_date_parsed", "confidence", "created_at")
+    search_fields = ("lot_number", "expiry_date", "raw_text")
+    list_filter = ("created_at",)
+```
+
+---
+
+## 14) Run the project
+
+```bash
+python manage.py runserver
+```
+
+Open:
+- `http://127.0.0.1:8000/`
+
+---
+
+## 15) Test API quickly with curl
+
+Scan endpoint:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/scan/ \
+  -F "image=@/absolute/path/to/label.jpg"
+```
+
+History:
+
+```bash
+curl http://127.0.0.1:8000/api/history/
+```
+
+Delete record:
+
+```bash
+curl -X DELETE http://127.0.0.1:8000/api/labels/1/
+```
+
+---
+
+## 16) Add tests
+
+Create/edit `scanner/tests.py` with at least these cases:
+- noisy lot text extraction (e.g., `Rn6 2 0` -> `RN620`)
+- merged digit expiry extraction (e.g., `102026` -> `10/2026`)
+- full date extraction (e.g., `08/05/2024`)
+- invalid OCR date rejection (e.g., no fake `83/2010`)
+
+Run tests:
+
+```bash
+python manage.py test scanner --verbosity=2
+```
+
+---
+
+## 17) Train spaCy model (optional advanced)
+
+If your OCR service has training support:
+
+```bash
+python ocr_service.py --train
+```
+
+Then scans can use NER first, regex fallback second.
+
+Tip:
+- Start with 20-50 labeled examples.
+- Grow to 100+ for better stability.
+
+---
+
+## 18) Common problems + fixes
+
+### Problem: `python: command not found`
+Use `python3` or `./venv/bin/python`.
+
+### Problem: `ModuleNotFoundError: django`
+You are not in venv. Activate it:
+
+```bash
+source venv/bin/activate
+```
+
+### Problem: OCR very slow first time
+EasyOCR model downloads/loads first run. Normal behavior.
+
+### Problem: Empty lot number
+- OCR text is too noisy
+- keyword not recognized
+- add more fallback patterns
+
+### Problem: Wrong expiry date from noise
+- normalize digits first
+- validate month range (1-12)
+- validate year range (recommended 1900-2100)
+- reject candidate if parser fails
+
+### Problem: `500` on `/api/scan/`
+Check traceback in terminal and ensure:
+- image exists in media
+- `scan_label` returns required keys
+- DB migrations were applied
+
+---
+
+## 19) Suggested project structure
+
+```text
+Product_Label_Scanner/
+├── manage.py
+├── requirements.txt
+├── db.sqlite3
+├── label_scanner/
+│   ├── settings.py
+│   ├── urls.py
+│   └── ...
+├── scanner/
+│   ├── models.py
+│   ├── serializers.py
+│   ├── views.py
+│   ├── urls.py
+│   ├── ocr_service.py
+│   ├── tests.py
+│   └── migrations/
+├── templates/
+│   └── scanner/
+│       └── index.html
+├── static/
+│   ├── css/style.css
+│   └── js/app.js
+└── media/
+    └── labels/
+```
+
+---
+
+## 20) Full rebuild command sequence (copy-paste)
+
+```bash
+mkdir Product_Label_Scanner
+cd Product_Label_Scanner
+python3 -m venv venv
+source venv/bin/activate
+pip install Django djangorestframework easyocr opencv-python-headless dateparser spacy
+pip freeze > requirements.txt
+
+django-admin startproject label_scanner .
+python manage.py startapp scanner
+
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+```
+
+Then create all files explained above.
+
+---
+
+## 21) What to do next (learning path)
+
+1. Build regex-only version first and make it stable.
+2. Add OpenCV preprocessing and compare OCR quality.
+3. Add spaCy NER and fallback logic.
+4. Add test cases for each bug you discover.
+5. Improve extraction rules using real label data.
+
+---
+
+If you follow this file section-by-section, you can recreate the whole project yourself from zero and understand every layer.
