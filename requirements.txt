@@ -3,10 +3,6 @@
 # Core
 Django==6.0.5
 djangorestframework==3.17.1
-gunicorn
-whitenoise
-dj-database-url
-psycopg2-binary
 
 # OCR + ML (CPU-only — no CUDA needed on Railway)
 easyocr==1.7.2
