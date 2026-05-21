@@ -16,9 +16,12 @@
       <div class="logo-icon">+</div>
       <div class="logo-text">MedLabel <span>Scanner</span></div>
     </div>
-    <div class="status-badge">
-      <div class="status-dot"></div>
-      <span>System Ready</span>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <a href="/report/" style="color: #4af0b4; text-decoration: none; font-size: 14px; font-weight: 600; border: 1px solid #4af0b4; padding: 6px 12px; border-radius: 4px; transition: all 0.2s;">View Technical Report &rarr;</a>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>System Ready</span>
+      </div>
     </div>
   </header>
 
@@ -39,9 +42,13 @@
         <div id="dropzone" class="dropzone">
           <div class="dropzone-icon">&uarr;</div>
           <p class="dropzone-text">Drag & drop your image here</p>
-          <p class="dropzone-hint">or click to browse from your device</p>
+          <p class="dropzone-hint">or browse files / take a live picture</p>
           <input type="file" id="fileInput" accept="image/*" style="display:none">
-          <button class="btn-browse" type="button">Browse Files</button>
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+            <button class="btn-browse" type="button" id="btnBrowseProxy">Browse Files</button>
+            <button class="btn-browse" type="button" id="btnCameraProxy" style="background: var(--surface2); border: 1px solid var(--accent2); color: var(--accent2);">Take Picture</button>
+          </div>
         </div>
 
         <!-- Preview -->

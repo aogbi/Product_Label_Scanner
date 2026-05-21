@@ -17,6 +17,10 @@ def index(request):
     """Render the main scanner UI."""
     return render(request, "scanner/index.html")  # templates/scanner/index.html
 
+def report_view(request):
+    """Serve the Technical Report HTML template."""
+    return render(request, "scanner/ProductLabelScanner_Report.html")
+
 
 @api_view(["POST"])
 @parser_classes([MultiPartParser, FormParser])

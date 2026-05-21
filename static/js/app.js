@@ -30,15 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const historyCount = document.getElementById("historyCount");
   const historyEmpty = document.getElementById("historyEmpty");
 
-  // ---- State ----
-  let currentFile = null;
-  let currentLabelId = null;
+  const cameraInput = document.getElementById("cameraInput");
+  const btnBrowseProxy = document.getElementById("btnBrowseProxy");
+  const btnCameraProxy = document.getElementById("btnCameraProxy");
 
-  // ---- Init ----
-  loadHistory();
-
-  // ---- File Upload ----
+  // ---- File & Camera Upload ----
   dropzone.addEventListener("click", () => fileInput.click());
+  btnBrowseProxy.addEventListener("click", (e) => { e.stopPropagation(); fileInput.click(); });
+  btnCameraProxy.addEventListener("click", (e) => { e.stopPropagation(); cameraInput.click(); });
 
   dropzone.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -54,6 +53,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   fileInput.addEventListener("change", function () {
+    if (this.files.length) handleFile(this.files[0]);
+  });
+
+  // ---- State ----
+  let currentFile = null;
+  let currentLabelId = null;
+
+  // ---- Init ----
+  loadHistory();
+
+  cameraInput.addEventListener("change", function () {
     if (this.files.length) handleFile(this.files[0]);
   });
 
