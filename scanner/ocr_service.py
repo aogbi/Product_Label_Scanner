@@ -4,6 +4,7 @@ import os
 import re
 from datetime import datetime
 import dateparser
+import dateparser.search
 
 # ============================================================
 # Month name regex (English + French)
@@ -309,12 +310,22 @@ def extract_dates_from_lines(grouped_lines):
         # --- Case A: Line contains a month name ---
         month_match = MONTH_NAMES_RE.search(cleaned)
         if month_match:
-            # Extract the month name and any number next to it
-            # Look for patterns like "JUN 30 2026", "30 JUN 26", "JUN 26", etc.
-            dt = _safe_parse(cleaned)
-            if dt and 2020 <= dt.year <= 2035:
-                found_dates.append((cleaned, dt))
-                continue
+            # Remove long barcodes/GTINs from the line before parsing so they don't break dateparser
+            clean_for_dateparser = re.sub(r'\d{5,}', '', cleaned)
+            # dateparser.search imported at module top level
+            extracted = dateparser.search.search_dates(
+                clean_for_dateparser,
+                settings={
+                    'PREFER_DATES_FROM': 'future',
+                    'PREFER_DAY_OF_MONTH': 'last',
+                    'DATE_ORDER': 'DMY'
+                }
+            )
+            if extracted:
+                for text_str, dt in extracted:
+                    if dt and 2020 <= dt.year <= 2035:
+                        found_dates.append((text_str, dt))
+            continue
         
         # --- Case B: Line has digits (no month name) ---
         # Split into words and process each
@@ -366,12 +377,61 @@ _reader = None
 def get_reader():
     global _reader
     if _reader is None:
+        # Use gpu=False for portability; set gpu=True if CUDA is available
         _reader = easyocr.Reader(['en'], gpu=False)
     return _reader
+
+
+# ============================================================
+# LOT Number Extraction
+# ============================================================
+# Keywords that should NOT be treated as lot numbers
+_LOT_REJECT = {'EXP', 'EXPIRY', 'BB', 'DOM', 'MFG', 'USE', 'BEST', 'PER', 'FAB', 'PPV', 'DH'}
+
+_LOT_PATTERNS = [
+    # "LOT: A1234B" / "LOT A1234B" / "LOT# A1234B" — negative lookahead avoids keywords
+    re.compile(r'(?:LOT|BATCH|Lo[Tt])[#:\s]*([A-Z0-9][\w\-\.]{1,30})(?!\s*:)', re.IGNORECASE),
+    # "L/N: A1234B"
+    re.compile(r'L/?N[:\s]*([A-Z0-9][\w\-\.]{1,30})(?!\s*:)', re.IGNORECASE),
+    # "Lot No: A1234B" / "Lot No. A1234B"
+    re.compile(r'LOT\s*(?:NO|NUM|NUMBER)[.\s:]*([A-Z0-9][\w\-\.]{1,30})(?!\s*:)', re.IGNORECASE),
+]
+
+def extract_lot_number(grouped_lines):
+    """
+    Extract a lot/batch number from the spatially grouped OCR lines.
+    Returns the matched lot string or empty string.
+    """
+    for line_blocks in grouped_lines:
+        line_text = " ".join(b['text'] for b in line_blocks)
+        # Clean spaces between single characters: "L 0 T" -> "LOT"
+        cleaned = re.sub(r'(?<=\b\w) (?=\w\b)', '', line_text)
+        cleaned = re.sub(r'(?<=\d) (?=\d)', '', cleaned)
+
+        for pattern in _LOT_PATTERNS:
+            match = pattern.search(cleaned)
+            if match:
+                lot = match.group(1).strip().rstrip('.')
+                # Reject if the "lot number" is actually a keyword
+                if lot.upper() in _LOT_REJECT:
+                    continue
+                # Reject if it's purely numeric and looks like a date
+                if lot.isdigit() and len(lot) <= 4:
+                    continue
+                return lot
+    return ""
+
 
 def scan_label(image_path):
     """
     Process a single label image and return extracted data.
+    
+    Pipeline:
+      1. EasyOCR reads all text bounding boxes
+      2. Boxes grouped into lines by Y-coordinate proximity
+      3. LOT number extracted via regex patterns
+      4. Expiry date extracted via multi-strategy date parsing
+      5. Results returned as dict for Django view
     """
     reader = get_reader()
     
@@ -388,7 +448,7 @@ def scan_label(image_path):
         total_confidence += confidence
         count += 1
         
-        if confidence > 0.7:
+        if confidence > 0.4:
             blocks.append({
                 'left_x': int(bbox[0][0]),
                 'left_y': int(bbox[0][1]),
@@ -405,6 +465,9 @@ def scan_label(image_path):
     blocks.sort(key=lambda b: (b['left_y'], b['left_x']))
     grouped_lines = group_blocks_into_lines(blocks, y_threshold=30)
     
+    # Extract LOT number
+    lot_number = extract_lot_number(grouped_lines)
+    
     # Extract dates
     found_dates = extract_dates_from_lines(grouped_lines)
     
@@ -417,15 +480,31 @@ def scan_label(image_path):
         # The latest date is our expiry
         latest_date = found_dates[-1]
         
-        # Standardize the output format to DD/MM/YYYY
-        expiry_date_str = latest_date[1].strftime('%d/%m/%Y')
+        raw_str = latest_date[0]
+        dt = latest_date[1]
+        
+        # Determine if the original string specified a day
+        nums = re.findall(r'\d+', raw_str)
+        has_month_word = bool(re.search(r'[a-zA-Z]{3,}', raw_str))
+        
+        has_day = False
+        if len(nums) >= 3:
+            has_day = True
+        elif len(nums) == 2 and has_month_word:
+            has_day = True
+            
+        # Standardize the output format dynamically
+        if has_day:
+            expiry_date_str = dt.strftime('%d/%m/%Y')
+        else:
+            expiry_date_str = dt.strftime('%m/%Y')
         
         # Return as YYYY-MM-DD string for Django model (DateField)
-        expiry_date_parsed = latest_date[1].strftime('%Y-%m-%d')
+        expiry_date_parsed = dt.strftime('%Y-%m-%d')
         
     return {
         "raw_text": raw_text_full,
-        "lot_number": "",  # To be implemented later if needed
+        "lot_number": lot_number,
         "expiry_date": expiry_date_str,
         "expiry_date_parsed": expiry_date_parsed,
         "confidence": avg_confidence

@@ -15,6 +15,7 @@ env/
 db.sqlite3
 media/
 meds/
+documentation/
 *.log
 
 # EasyOCR model cache
