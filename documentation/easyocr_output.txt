@@ -1,0 +1,94 @@
+--- 68820359e73edcca598e530a_Available frame to use.jpg ---
+  --- Grouped close to each other ---
+  sentence | Batch
+  sentence | Mfg:
+  sentence | date
+  sentence | Exp:
+  sentence | 08/05 /2021
+  sentence | date
+  sentence | 08/05/2024
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (1).jpeg ---
+  --- Grouped close to each other ---
+  sentence | FER.00/2025
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (2).jpeg ---
+  --- Grouped close to each other ---
+  sentence | 1282779"381581'
+  sentence | 3
+  sentence | ACL : 3401364432242
+  sentence | 05/24
+  sentence | K48598
+  sentence | 05/27
+  sentence | EXP
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (3).jpeg ---
+  --- Grouped close to each other ---
+  sentence | 2 5 1 3 9 1
+  sentence | L 0 T
+  sentence | 2 0 2 8
+  sentence | 0 4
+  sentence | 3 3
+  sentence | 4 0
+  sentence | P P V
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (4).jpeg ---
+  --- Grouped close to each other ---
+  sentence | et
+  sentence | PPV :
+  sentence | 13
+  sentence | DH 10
+  sentence | PER:
+  sentence | 10/27
+  sentence | LoT:
+  sentence | N3661
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (5).jpeg ---
+  --- Grouped close to each other ---
+  sentence | Melabonine 1,9mg
+  sentence | LAPROPHAN
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM.jpeg ---
+  --- Grouped close to each other ---
+  sentence | 03400927708022
+  sentence | 08-2025
+  sentence | 2713076
+--- drug-expiration-dates-expiry-date-on-packet-of-medication-photo.jpg ---
+  --- Grouped close to each other ---
+  sentence | 0
+  sentence | 3
+  sentence | Mecte 9710
+  sentence | 19
+  sentence | Vecteez
+  sentence | '21
+  sentence | 7/9/18
+  sentence | cteezy
+  sentence | 6/9/21
+  sentence | gm:
+  sentence | gm:
+  sentence | 2.025
+  sentence | (Exp.)
+  sentence | gm:
+  sentence | 0.390
+  sentence | Irous)
+  sentence | gm:
+  sentence | 0.225
+  sentence | 0.435
+  sentence | cteez
+--- med1.jpeg ---
+  --- Grouped close to each other ---
+  sentence | EXP:
+  sentence | LOT:
+  sentence | 20 2 6
+  sentence | 10
+  sentence | Rn6 2 0
+  sentence | DOM:
+  sentence | 2 0 2 3
+--- med2.jpeg ---
+  --- Grouped close to each other ---
+  sentence | PPC : 139.00 DH
+  sentence | CIX31
+  sentence | Lot
+  sentence | 07/25
+--- med3.jpeg ---
+  --- Grouped close to each other ---
+  sentence | 2JV0951
+  sentence | LOT:
+  sentence | 09-2025
+  sentence | EXP:
+  sentence | 10-2022
+  sentence | FAB:

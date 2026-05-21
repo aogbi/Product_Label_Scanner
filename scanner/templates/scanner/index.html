@@ -1,0 +1,142 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Product Label Scanner — Extract lot numbers and expiry dates from pharmaceutical labels using OCR.">
+  <title>MedLabel Scanner | OCR Label Extraction</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">+</div>
+      <div class="logo-text">MedLabel <span>Scanner</span></div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      <span>System Ready</span>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="app-main">
+    <h1 class="page-title">Extract Label Data</h1>
+    <p class="page-subtitle">Upload a pharmaceutical product label to automatically detect lot numbers and expiry dates.</p>
+
+    <div class="grid-layout">
+
+      <!-- Left: Image Upload -->
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">&bull;</span> Label Image
+        </div>
+
+        <!-- Dropzone -->
+        <div id="dropzone" class="dropzone">
+          <div class="dropzone-icon">&uarr;</div>
+          <p class="dropzone-text">Drag & drop your image here</p>
+          <p class="dropzone-hint">or click to browse from your device</p>
+          <input type="file" id="fileInput" accept="image/*" style="display:none">
+          <button class="btn-browse" type="button">Browse Files</button>
+        </div>
+
+        <!-- Preview -->
+        <div id="previewContainer" class="preview-container">
+          <img id="previewImage" src="" alt="Label Preview">
+          <div id="scannerLine" class="scanner-line"></div>
+          <div id="scanOverlay" class="scan-overlay">
+            <div class="spinner"></div>
+            <p>Analyzing label…</p>
+            <p class="hint">Running OCR extraction</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Extracted Data -->
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">&bull;</span> Extracted Data
+        </div>
+
+        <!-- Idle -->
+        <div id="idleState" class="idle-state">
+          <div class="idle-icon">&mdash;</div>
+          <p>Awaiting image upload.</p>
+          <p class="sub">Extracted data will appear here for verification.</p>
+        </div>
+
+        <!-- Data Form -->
+        <div id="dataForm" class="data-form">
+          <div class="alert-banner warn">
+            <span class="alert-icon">!</span>
+            <div>
+              <div class="alert-title">Please verify extracted data</div>
+              <div class="alert-desc">OCR may occasionally misread characters. Compare with the original image before saving.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">LOT / Batch Number</label>
+            <input type="text" id="lotInput" class="form-input" placeholder="e.g. ABC123">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Expiry Date <span class="required">*</span></label>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <input type="text" id="expInput" class="form-input mono" placeholder="MM/YYYY">
+              <span id="dateStatus" class="date-status">—</span>
+            </div>
+            <p class="field-hint">Format: MM/YYYY or DD/MM/YYYY</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confidence</label>
+            <div class="confidence-bar">
+              <div class="confidence-track">
+                <div id="confFill" class="confidence-fill" style="width:0%"></div>
+              </div>
+              <span id="confVal" class="confidence-val">0%</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button id="rawToggle" class="raw-text-toggle" type="button">▸ Show raw OCR text</button>
+            <div id="rawTextBox" class="raw-text-box"></div>
+          </div>
+
+          <div class="btn-row">
+            <button id="btnReset" class="btn btn-secondary" type="button">Rescan</button>
+            <button id="btnSave" class="btn btn-primary" type="button">Confirm &amp; Store</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <section class="history-section">
+      <div class="history-header">
+        <h3><span class="icon">&bull;</span> Scan History</h3>
+        <span id="historyCount" class="history-count">0</span>
+      </div>
+      <p id="historyEmpty" class="history-empty">No scans yet. Upload your first label above.</p>
+      <div id="historyGrid" class="history-grid"></div>
+    </section>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">
+    <div class="toast-icon">&check;</div>
+    <div class="toast-text">
+      <div class="t-title">Success</div>
+      <div class="t-desc">Operation completed.</div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+--- 68820359e73edcca598e530a_Available frame to use.jpg ---
+  --- Grouped Lines ---
+  line | Batch
+  line | Mfg: date
+  line | Exp: date 08/05 /2021
+  line | 08/05/2024
+  --- Found Dates ---
+  Date: 08/05/2021 -> 05/2021
+  Date: 08/05/2024 -> 05/2024
+  => EXP: 08/05/2024 (05/2024)
+
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (1).jpeg ---
+  --- Grouped Lines ---
+  line | FER.00/2025
+  => No valid date found
+
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (2).jpeg ---
+  --- Grouped Lines ---
+  line | 1282779"381581'
+  line | 3
+  line | ACL : 3401364432242
+  line | K48598 05/24
+  line | EXP 05/27
+  --- Found Dates ---
+  Date: 05/27 -> 05/2027
+  => EXP: 05/27 (05/2027)
+
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (3).jpeg ---
+  --- Grouped Lines ---
+  line | L 0 T 2 5 1 3 9 1
+  line | 0 4 2 0 2 8
+  line | P P V 3 3 4 0
+  --- Found Dates ---
+  Date: 042028 -> 04/2028
+  => EXP: 042028 (04/2028)
+
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (4).jpeg ---
+  --- Grouped Lines ---
+  line | et
+  line | PPV : 13 DH 10
+  line | PER: 10/27
+  line | LoT: N3661
+  --- Found Dates ---
+  Date: 10/27 -> 10/2027
+  => EXP: 10/27 (10/2027)
+
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM (5).jpeg ---
+  --- Grouped Lines ---
+  line | Melabonine 1,9mg
+  line | LAPROPHAN
+  => No valid date found
+
+--- WhatsApp Image 2026-05-19 at 11.54.31 AM.jpeg ---
+  --- Grouped Lines ---
+  line | 03400927708022
+  line | 08-2025
+  line | 2713076
+  --- Found Dates ---
+  Date: 08/2025 -> 08/2025
+  => EXP: 08/2025 (08/2025)
+
+--- drug-expiration-dates-expiry-date-on-packet-of-medication-photo.jpg ---
+  --- Grouped Lines ---
+  line | 0
+  line | 3
+  line | Mecte 9710 19 Vecteez
+  line | '21
+  line | 7/9/18
+  line | cteezy
+  line | 6/9/21
+  line | gm:
+  line | 2.025 gm: (Exp.)
+  line | 0.390 gm:
+  line | Irous) 0.225 gm:
+  line | 0.435
+  line | cteez
+  --- Found Dates ---
+  Date: 6/9/21 -> 09/2021
+  => EXP: 6/9/21 (09/2021)
+
+--- med1.jpeg ---
+  --- Grouped Lines ---
+  line | LOT: Rn6 2 0 EXP: 10 20 2 6
+  line | DOM: 2 0 2 3
+  --- Found Dates ---
+  Date: 102026 -> 10/2026
+  => EXP: 102026 (10/2026)
+
+--- med2.jpeg ---
+  --- Grouped Lines ---
+  line | PPC : 139.00 DH
+  line | Lot CIX31
+  line | 07/25
+  --- Found Dates ---
+  Date: 07/25 -> 07/2025
+  => EXP: 07/25 (07/2025)
+
+--- med3.jpeg ---
+  --- Grouped Lines ---
+  line | 2JV0951
+  line | LOT: 09-2025
+  line | EXP: 10-2022
+  line | FAB:
+  --- Found Dates ---
+  Date: 10/2022 -> 10/2022
+  Date: 09/2025 -> 09/2025
+  => EXP: 09/2025 (09/2025)
+
