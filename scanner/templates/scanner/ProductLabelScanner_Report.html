@@ -335,7 +335,7 @@
       </div>
       <div class="tech-card">
         <div class="label">Database</div>
-        <div class="value">SQLite (dev) → PostgreSQL (prod)</div>
+        <div class="value">SQLite (dev)</div>
       </div>
       <div class="tech-card">
         <div class="label">Core Logic</div>
@@ -459,29 +459,11 @@
     <h3>Evolution of the rule</h3>
     <div class="challenge">
       <div class="challenge-header">
-        <div class="challenge-icon">①</div>
-        <div><div class="challenge-title">Label-priority (EXP wins)</div></div>
-      </div>
-      <div class="challenge-body">
-        <p style="font-size:13.5px;color:var(--text-dim);margin:0;">Prefer any date tagged <code>EXP</code>, never return a <code>FAB</code>/<code>DOM</code> date. Fixed the original "manufacture date returned as expiry" bug, but failed when OCR scrambled the EXP field into garbage while the DOM field stayed clean.</p>
-      </div>
-    </div>
-    <div class="challenge">
-      <div class="challenge-header">
-        <div class="challenge-icon">②</div>
-        <div><div class="challenge-title">EXP-must-be-after-DOM floor</div></div>
-      </div>
-      <div class="challenge-body">
-        <p style="font-size:13.5px;color:var(--text-dim);margin:0;">Use the manufacture date as a hard floor and reject any candidate not strictly later. Conceptually clean, but too strict — it returned nothing on labels where the only recoverable date equalled the manufacture date, and the "EXP after DOM" assumption is not guaranteed in practice.</p>
-      </div>
-    </div>
-    <div class="challenge">
-      <div class="challenge-header">
         <div class="challenge-icon">③</div>
         <div><div class="challenge-title">Largest valid date (current)</div></div>
       </div>
       <div class="challenge-body">
-        <p style="font-size:13.5px;color:var(--text-dim);margin:0;">Parse every date, compare, take the largest. Labels are ignored for the decision. The single safeguard: drop reconstructed dates that duplicate a cleanly-parsed date, killing scrambled-OCR noise without inventing values. Simple, predictable, and matches how the dates actually relate on a label.</p>
+        <p style="font-size:13.5px;color:var(--text-dim);margin:0;">Parse every date, compare, and select the largest valid date. Labels are ignored for the decision. The single safeguard: drop <code>reconstructed</code> candidates that duplicate a cleanly-parsed date, preventing scrambled-OCR noise from inventing larger values. This rule is simple, predictable, and aligns with how expiry/manufacture dates typically appear on labels.</p>
       </div>
     </div>
 
@@ -618,123 +600,9 @@
     </div>
   </section>
 
-  <!-- ======================== SECTION 6 ======================== -->
-  <section id="s6">
-    <div class="section-label">// 06</div>
-    <h2><span class="num">06</span> Deployment Postmortem</h2>
-    <p>Moving from local development to a cloud container surfaced two infrastructure issues, recorded here as architectural learnings.</p>
+  
 
-    <h3>Issue 1 — 502 Bad Gateway (OOM)</h3>
-    <pre><span class="cm"># logs during an image scan</span>
-GET    /                 200    3s       <span class="cm"># frontend loads fine</span>
-GET    /api/history/     200    289ms    <span class="cm"># database healthy</span>
-POST   /api/scan/        502    17s      <span class="cm"># CRASH — OOM kill</span></pre>
-
-    <div class="deploy-grid">
-      <div class="deploy-card">
-        <h4>Root Cause</h4>
-        <p>PyTorch weights consume ~200–300MB on import. A free-tier 500MB container can't absorb the memory spike when a scan runs; the worker is killed and the proxy returns 502. Reducing to a single worker wasn't enough — the model itself is too large for the container.</p>
-      </div>
-      <div class="deploy-card fixed">
-        <h4>Production Fix</h4>
-        <p>Move inference to a managed cloud OCR API (Google Cloud Vision / AWS Textract). Django sends the image, the API returns text, and the custom parsing pipeline runs on the lightweight response — no memory spike.</p>
-      </div>
-    </div>
-
-    <h3>Issue 2 — 404 on Media Files</h3>
-    <pre>GET    /media/labels/med3.jpeg    404    285ms</pre>
-
-    <div class="deploy-grid">
-      <div class="deploy-card">
-        <h4>Root Cause</h4>
-        <p>With <code>DEBUG = False</code>, Django stops serving <code>/media/</code> by design — a WSGI app shouldn't stream binary files directly. A security principle, not a bug.</p>
-      </div>
-      <div class="deploy-card fixed">
-        <h4>Fix</h4>
-        <p>Route uploaded media to object storage (S3 / GCS) and serve via CDN; Django stores only the URL reference.</p>
-      </div>
-    </div>
-
-    <h3>Production Roadmap</h3>
-    <div class="roadmap">
-      <div class="roadmap-card">
-        <div class="roadmap-icon">☁️</div>
-        <h4>Cloud OCR APIs</h4>
-        <p>Replace EasyOCR with a managed vision API. Pay per scan, drop the RAM ceiling entirely.</p>
-      </div>
-      <div class="roadmap-card">
-        <div class="roadmap-icon">⚙️</div>
-        <h4>Async Processing</h4>
-        <p>Decouple scanning from the request with Redis + Celery; push results when ready.</p>
-      </div>
-      <div class="roadmap-card">
-        <div class="roadmap-icon">🗄️</div>
-        <h4>Cloud Storage</h4>
-        <p>Move <code>/media/</code> to S3 + CDN. Django stores URLs, not files.</p>
-      </div>
-    </div>
-
-    <div class="note">
-      <strong>Key lesson:</strong> deep-learning inference can't run synchronously inside a web request at scale. The parsing pipeline — spatial grouping, date resolution, junk rejection, selection — stays 100% intact under any of these upgrades; only the OCR source changes.
-    </div>
-  </section>
-
-  <!-- ======================== SECTION 7 ======================== -->
-  <section id="s7">
-    <div class="section-label">// 07</div>
-    <h2><span class="num">07</span> API Reference</h2>
-
-    <div class="endpoint">
-      <div class="endpoint-header">
-        <span class="method method-post">POST</span>
-        <span class="endpoint-path">/api/scan/</span>
-        <span class="endpoint-desc">Upload image and trigger the pipeline</span>
-      </div>
-      <div class="endpoint-body">
-        <p>Request: <code>multipart/form-data</code> with field <code>image</code></p>
-        <pre>{
-  <span class="str">"raw_text"</span>: <span class="str">"LOT: EXP: Rn6 2 0 10 20 2 6 DOM: 1 0 2 0 2 6"</span>,
-  <span class="str">"lot_number"</span>: <span class="str">"___"</span>,           <span class="cm">// LOT extraction currently stubbed</span>
-  <span class="str">"expiry_date"</span>: <span class="str">"10/2026"</span>,
-  <span class="str">"expiry_date_parsed"</span>: <span class="str">"2026-10-01"</span>, <span class="cm">// ISO 8601 for the DB DateField</span>
-  <span class="str">"confidence"</span>: 0.7234
-}</pre>
-        Returns <code>201 Created</code> on success. <code>expiry_date</code> is empty and <code>expiry_date_parsed</code> is <code>null</code> when no valid date is found.
-      </div>
-    </div>
-
-    <div class="endpoint">
-      <div class="endpoint-header">
-        <span class="method method-get">GET</span>
-        <span class="endpoint-path">/api/history/</span>
-        <span class="endpoint-desc">List all scans, newest first</span>
-      </div>
-      <div class="endpoint-body">Paginated array of <code>ProductLabel</code> records, used by the frontend history grid.</div>
-    </div>
-
-    <div class="endpoint">
-      <div class="endpoint-header">
-        <span class="method method-patch">PATCH</span>
-        <span class="endpoint-path">/api/labels/&lt;id&gt;/</span>
-        <span class="endpoint-desc">Manual correction of OCR results</span>
-      </div>
-      <div class="endpoint-body">
-        <p>Human-in-the-loop correction when OCR misreads. Request: <code>application/json</code></p>
-        <pre>{
-  <span class="str">"expiry_date"</span>: <span class="str">"10/2026"</span>
-}</pre>
-      </div>
-    </div>
-
-    <div class="endpoint">
-      <div class="endpoint-header">
-        <span class="method method-delete">DELETE</span>
-        <span class="endpoint-path">/api/labels/&lt;id&gt;/</span>
-        <span class="endpoint-desc">Remove a scan record and its image</span>
-      </div>
-      <div class="endpoint-body">Deletes the database record and the stored image from <code>/media/labels/</code>.</div>
-    </div>
-  </section>
+  
 
   <!-- ======================== SECTION 8 ======================== -->
   <section id="s8">
@@ -743,12 +611,10 @@ POST   /api/scan/        502    17s      <span class="cm"># CRASH — OOM kill</
     <p>Honest boundaries of the current build, kept visible so they aren't mistaken for bugs.</p>
 
     <div class="stats">
-      <div class="stat-box stat-warn"><div class="stat-num">"___"</div><div class="stat-label">LOT stubbed in scan_label</div></div>
       <div class="stat-box stat-warn"><div class="stat-num">2035</div><div class="stat-label">Hard upper year bound</div></div>
       <div class="stat-box stat-fail"><div class="stat-num">∅</div><div class="stat-label">Returns empty on unreadable input</div></div>
     </div>
 
-    <p><strong>LOT extraction is disabled.</strong> The <code>extract_lot_number()</code> function and its patterns still exist, but <code>scan_label()</code> hardcodes <code>lot_number = "___"</code>. Re-enable by wiring the function back into the return value.</p>
     <p><strong>The year window is fixed at 2020–2035.</strong> Any date outside that range is rejected. This is a deliberate guard against barcode false positives, but it must be widened before 2035 or for products with longer shelf lives.</p>
     <p><strong>Truly corrupted OCR is unrecoverable.</strong> When digits are merged wrong at the source (e.g. <code>"10"</code> and <code>"20"</code> read as units instead of <code>"1 0"</code> / <code>"2 0"</code>), no parser can reliably reconstruct the intended date. The right fix there is image quality and the OCR confidence threshold, not more parsing logic.</p>
     <p><strong>Largest-date selection ignores labels.</strong> See §04 — by design, the latest date always wins, so a label with a manufacture date later than its expiry would return the wrong field. Accepted trade-off for predictability.</p>
