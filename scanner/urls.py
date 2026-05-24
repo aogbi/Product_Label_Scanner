@@ -8,3 +8,4 @@ urlpatterns = [
     path("api/history/", label_history, name="label_history"),
     path("api/labels/<int:pk>/", label_detail, name="label_detail"),
 ]
+

@@ -15,10 +15,3 @@ class ProductLabelSerializer(serializers.ModelSerializer):
             "confidence",
             "created_at",
         ]
-        read_only_fields = [
-            "id",
-            "raw_text",
-            "expiry_date_parsed",
-            "confidence",
-            "created_at",
-        ]
